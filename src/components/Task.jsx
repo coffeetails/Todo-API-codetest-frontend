@@ -1,23 +1,21 @@
-import {useState} from 'react'
+import { useState } from 'react'
 import './Task.css';
 import Sidebar from './Sidebar';
 import Header from "./Header.jsx";
-import axios from "axios";
+import { taskService } from '../services/taskService.js';
+// import axios from "axios";
+// import { authService } from '../services/authService.js';
 
 // TODO: make this component functional by implementing state management and API calls
 const Task = () => {
   const [todos, setTodos] = useState([]);
   const [files, setFiles] = useState([]);
 
-  const axiosInstance = axios.create({
-    baseURL: 'http://localhost:9090/api/todo',
-    withCredentials: true,
-    headers: {'Authorization': localStorage.getItem('auth_token')},
-    // auth: {
-    //   username: JSON.parse(localStorage.getItem('auth_user')).name,
-    //   password: JSON.parse(localStorage.getItem('auth_user')).password
-    // },
-  });
+  // const axiosInstance = axios.create({
+  //   baseURL: 'http://localhost:9090',
+  //   withCredentials: true,
+  //   headers: {Authorization: `Bearer ${authService.getToken()}`},
+  // });
 
 
   const addTodo = async (event) => {
@@ -27,28 +25,16 @@ const Task = () => {
     const attachmentsInput = event.currentTarget.elements.todoAttachments;
     //const personInput = event.currentTarget.elements.todoPerson[data.get('todoPerson')].label;
 
-
-    const newTodo = {
+    const newTodo = taskService.addTodo({
       "id": 0,
       "title": data.get('todoTitle').length != 0 ? data.get('todoTitle') : 'Todo',
       "description": data.get('todoDescription') ?? '',
       "completed": false,
-      "createdAt": new Date().toISOString().slice(0, 10),
+      "createdAt": new Date().toISOString(),
       "updatedAt": null,
       "dueDate": data.get('todoDueDate').length != 0  ? data.get('todoDueDate') : 'anytime',
       "personId": data.get('todoPerson') != 0 ? data.get('todoPerson') : 'anyone', // TODO: Get their actual id
       "numberOfAttachments": attachmentsInput.files.length ?? '0',
-    };
-
-    //axiosInstance.post('/', JSON.stringify(newTodo) )
-    axiosInstance.post('/', 
-      newTodo
-    )
-    .then(function (response) {
-      console.log(response);
-    })
-    .catch(function (error) {
-      console.log(error);
     });
 
     setTodos(prev => [newTodo, ...prev]);

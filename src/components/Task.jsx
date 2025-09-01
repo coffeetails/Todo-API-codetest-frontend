@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './Task.css';
 import Sidebar from './Sidebar';
 import Header from "./Header.jsx";
@@ -10,13 +10,25 @@ import { taskService } from '../services/taskService.js';
 const Task = () => {
   const [todos, setTodos] = useState([]);
   const [files, setFiles] = useState([]);
+  
+  useEffect(() => {
+    setNewTodos();
+  },[]);
 
-  // const axiosInstance = axios.create({
-  //   baseURL: 'http://localhost:9090',
-  //   withCredentials: true,
-  //   headers: {Authorization: `Bearer ${authService.getToken()}`},
-  // });
-
+  async function setNewTodos() {
+    try {
+      const logTime = new Date().getHours() + ":" + new Date().getMinutes() + ":" + new Date().getSeconds();
+      const todos = await taskService.getTodos()
+      console.log( logTime," taskService.getTodos", todos);
+      if (Array.isArray(todos)) {  // Ensure data is an array
+        setTodos(todos);
+      } else {
+        console.error('Expected an array but got:', todos);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
 
   const addTodo = async (event) => {
     event.preventDefault();
@@ -25,7 +37,7 @@ const Task = () => {
     const attachmentsInput = event.currentTarget.elements.todoAttachments;
     //const personInput = event.currentTarget.elements.todoPerson[data.get('todoPerson')].label;
 
-    const newTodo = taskService.addTodo({
+    await taskService.addTodo({
       "id": 0,
       "title": data.get('todoTitle').length != 0 ? data.get('todoTitle') : 'Todo',
       "description": data.get('todoDescription') ?? '',
@@ -33,16 +45,16 @@ const Task = () => {
       "createdAt": new Date().toISOString(),
       "updatedAt": null,
       "dueDate": data.get('todoDueDate').length != 0  ? data.get('todoDueDate') : 'anytime',
-      "personId": data.get('todoPerson') != 0 ? data.get('todoPerson') : 'anyone', // TODO: Get their actual id
+      "personId": data.get('todoPerson') != 0 ? data.get('todoPerson') : '0', // TODO: Get their actual id
       "numberOfAttachments": attachmentsInput.files.length ?? '0',
     });
 
-    setTodos(prev => [newTodo, ...prev]);
+    //setTodos(prev => [newTodo, ...prev]);
+    setNewTodos();
   }
 
 
   const displayTodoItems = todos.map((todo, index) => {
-    
     return (
       <div className="list-group-item list-group-item-action" key={index}>
         <div className="d-flex w-100 justify-content-between align-items-start">
@@ -55,7 +67,7 @@ const Task = () => {
               <div className="d-flex align-items-center flex-wrap">
               <small className="text-muted me-2"> <i className="bi bi-calendar-event"></i> Due: {todo.dueDate}</small>
               <span className="badge bg-info me-2"> <i className="bi bi-person"></i> {/* TODO: person id → name */} {todo.personId}</span>
-              <span className="badge bg-warning text-dark me-2">{/* TODO: add status logic 'pending' → 'completed' */}pending</span>
+              <span className="badge bg-warning text-dark me-2">{/* TODO: add status logic 'pending' → 'completed' */}status</span>
             </div>
           </div>
           <div className="btn-group ms-3">

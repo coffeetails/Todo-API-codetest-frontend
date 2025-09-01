@@ -14,25 +14,40 @@ import axios from "axios";
 // GET      /overdue            get todos by overdue
 
 const axiosInstance = axios.create({
-baseURL: 'http://localhost:9090',
+baseURL: 'http://localhost:9090/api/todo',
 withCredentials: true,
-headers: {Authorization: `Bearer ${authService.getToken()}`},
 });
 
 export const taskService = {
 
-    addTodo:  async (newTodo) => {
-        axiosInstance.post('/api/todo', 
-            newTodo
-        )
-        .then(function (response) {
+    addTodo: async function addTodo(newTodo) {
+        try {
+            const response = await axiosInstance.post('', 
+                newTodo, 
+                { headers: { Authorization: `Bearer ${authService.getToken()}` } }
+            );
             console.log(response);
-            return newTodo;
-        })
-        .catch(function (error) {
+            return newTodo.data;
+
+        } catch (error) {
             console.log(error.response.data);
             console.log(error);
-        });
+        }
     },
 
+    getTodos: async function getTodos() {
+        try {
+            const response = await axiosInstance.get(
+                '',
+                { headers: { Authorization: `Bearer ${authService.getToken()}` } }
+            );
+            console.log(response);
+            return response.data;
+
+        } catch (error) {
+            console.log(error.response.data);
+            console.log(error);
+        }
+    },
+    
 }

@@ -14,40 +14,73 @@ import axios from "axios";
 // GET      /overdue            get todos by overdue
 
 const axiosInstance = axios.create({
-baseURL: 'http://localhost:9090/api/todo',
-withCredentials: true,
+	baseURL: 'http://localhost:9090/api/todo',
+	withCredentials: true,
 });
 
 export const taskService = {
 
-    addTodo: async function addTodo(newTodo) {
-        try {
-            const response = await axiosInstance.post('', 
-                newTodo, 
-                { headers: { Authorization: `Bearer ${authService.getToken()}` } }
-            );
-            console.log(response);
-            return newTodo.data;
+	addTodo: async function addTodo(newTodo) {
+		console.log("→→→→", newTodo);
+		try {
+			const response = await axiosInstance.post(
+				'',
+				newTodo,
+				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
+			);
+			console.log("response", response);
+			return newTodo.data;
 
-        } catch (error) {
-            console.log(error.response.data);
-            console.log(error);
-        }
-    },
+		} catch (error) {
+			console.log(error.response.data);
+			console.log(error);
+		}
+	},
 
-    getTodos: async function getTodos() {
-        try {
-            const response = await axiosInstance.get(
-                '',
-                { headers: { Authorization: `Bearer ${authService.getToken()}` } }
-            );
-            console.log(response);
-            return response.data;
+	getTodos: async function getTodos() {
+		try {
+			const response = await axiosInstance.get(
+				'',
+				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
+			);
+			console.log(response);
+			return response.data;
 
-        } catch (error) {
-            console.log(error.response.data);
-            console.log(error);
-        }
-    },
-    
+		} catch (error) {
+			console.log(error.response.data);
+			console.log(error);
+		}
+	},
+
+	updateTodo: async function updateTodo(todo) {
+		try {
+			const response = await axiosInstance.put(
+				`/${todo.id}`,
+				todo,
+				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
+			);
+			console.log(response);
+			return response.data;
+
+		} catch (error) {
+			console.log(error.response.data);
+			console.log(error);
+		}
+	},
+
+	deleteTodo: async function deleteTodo(todo) {
+		try {
+			const response = await axiosInstance.delete(
+				`/${todo.id}`,
+				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
+			);
+			console.log(response);
+			return response.data;
+
+		} catch (error) {
+			console.log(error.response.data);
+			console.log(error);
+		}
+	},
+
 }

@@ -1,28 +1,98 @@
 import { useEffect, useState, useRef } from 'react';
+import { taskService } from '../services/taskService.js';
+//import { authService } from '../services/authService.js';
 import './Task.css';
 import Sidebar from './Sidebar';
 import Header from "./Header.jsx";
-import { taskService } from '../services/taskService.js';
 import TaskItem from './TaskItem.jsx';
-// import axios from "axios";
-// import { authService } from '../services/authService.js';
+import { useForm } from "react-hook-form";
 
 // TODO: make this component functional by implementing state management and API calls
 const Task = () => {
+  const [displayFilter, setDisplayFilter] = useState(false);
+  const [displaySort, setDisplaySort] = useState(false);
+  const dropdownFilterRef = useRef(null);
+  const dropdownSortRef = useRef(null);
   const [todos, setTodos] = useState([]);
+  const [visibleTodos, setVisibleTodos] = useState([]);
   const [files, setFiles] = useState([]);
   const attachmentsInput = useRef(null);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    reset,
+    formState,
+    formState: {
+      errors,
+      isSubmitting,
+      isSubmitSuccessful
+    },
+  } = useForm({
+    defaultValues: {
+      todoTitle: '',
+      todoDescription: '',
+      todoDueDate: '',
+      todoPerson: '',
+      todoAttatchments: ''
+    }
+  });
+
 
   useEffect(() => {
     updateTodos();
+    const handleClickOutside = (event) => {
+      if (dropdownFilterRef.current && !dropdownFilterRef.current.contains(event.target)) {
+        setDisplayFilter(false);
+      }
+      if (dropdownSortRef.current && !dropdownSortRef.current.contains(event.target)) {
+        setDisplaySort(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+
   }, []);
+
+  useEffect(() => {
+    if (formState.isSubmitSuccessful) {
+      reset();
+      attatchmentDelete();
+    }
+  }, [formState, isSubmitSuccessful, reset]);
+
+
+  const addTodo = async (data) => {
+    const newTodo = {
+      "id": 0,
+      "title": data.todoTitle,
+      "description": data.todoDescription ?? '',
+      "completed": false,
+      "createdAt": new Date(),
+      "updatedAt": null,
+      "dueDate": data.todoDueDate.length != 0 ? data.todoDueDate : 'anytime',
+      "personId": data.todoPerson ? parseInt(data.todoPerson) + 1 : 1,
+      "numberOfAttachments": attachmentsInput.current.files.length,
+    };
+    console.log("→→→ newTodo", newTodo);
+    console.log("attachmentsInput", attachmentsInput.current.files.length);
+
+    try {
+      await taskService.addTodo(newTodo);
+
+      updateTodos();
+    } catch (error) {
+      setError("root", error);
+      console.log(error);
+    }
+  }
 
   async function updateTodos() {
     try {
       const todos = await taskService.getTodos()
-      if (Array.isArray(todos)) {  // Ensure data is an array
+      if (Array.isArray(todos)) {
         setTodos(todos);
-
+        setVisibleTodos(todos);
       } else {
         console.error('Expected an array but got:', todos);
 
@@ -34,30 +104,46 @@ const Task = () => {
     }
   }
 
-  // Alternative form validations
-  // react hook form
-  // formik
-  const addTodo = async (event) => {
-    event.preventDefault();
+  function sortTodos(sortingMethod) {
+    const allTodos = [...visibleTodos];
 
-    const data = new FormData(event.currentTarget);
-    const attachmentsInput = event.currentTarget.elements.todoAttachments;
-    //const personInput = event.currentTarget.elements.todoPerson[data.get('todoPerson')].label;
+    if (sortingMethod == "byCreatedDecending") {
+      allTodos.sort((todoA, todoB) => new Date(todoB.createdAt) - new Date(todoA.createdAt));
+      setVisibleTodos(allTodos);
 
-    await taskService.addTodo({
-      "id": 0,
-      "title": data.get('todoTitle').length != 0 ? data.get('todoTitle') : 'Todo',
-      "description": data.get('todoDescription') ?? '',
-      "completed": false,
-      "createdAt": new Date().toISOString(),
-      "updatedAt": null,
-      "dueDate": data.get('todoDueDate').length != 0 ? data.get('todoDueDate') : 'anytime',
-      "personId": data.get('todoPerson') != 0 ? data.get('todoPerson') + 1 : '1', // TODO: Get their actual id
-      "numberOfAttachments": attachmentsInput.files.length ?? '0',
-    });
+    } else if (sortingMethod == "byCreatedAcending") {
+      allTodos.sort((todoA, todoB) => new Date(todoA.createdAt) - new Date(todoB.createdAt));
+      setVisibleTodos(allTodos);
 
-    //setTodos(prev => [newTodo, ...prev]);
-    updateTodos();
+    } else if (sortingMethod == "byDueDateDecending") {
+      allTodos.sort((todoA, todoB) => new Date(todoB.dueDate) - new Date(todoA.dueDate));
+      setVisibleTodos(allTodos);
+
+    } else if (sortingMethod == "byDueDateAcending") {
+      allTodos.sort((todoA, todoB) => new Date(todoA.dueDate) - new Date(todoB.dueDate));
+      setVisibleTodos(allTodos);
+
+    }
+  }
+
+  function filterTodos(filteringMethod) {
+    const allTodos = [...todos];
+    if (filteringMethod == "all") {
+      setVisibleTodos(todos);
+    } else if (filteringMethod == "overdue") {
+      setVisibleTodos(allTodos.filter((todo) => {
+        // console.log(todo.dueDate);
+        // console.log("overdue: ", new Date(todo.dueDate) > new Date());
+        // console.log("pending: ", !todo.completed);
+        // console.log("both: ", !todo.completed && new Date(todo.dueDate) > new Date());
+        
+        return !todo.completed && new Date(todo.dueDate) < new Date();
+      }));
+      
+    } else if (filteringMethod == "pending") {
+      setVisibleTodos(allTodos.filter(todo => !todo.completed));
+    }
+    
   }
 
 
@@ -65,19 +151,25 @@ const Task = () => {
     const attatchmentNames = Array.from(event.target.files);
     setFiles(attatchmentNames);
   }
+
   const attatchmentDelete = () => {
     attachmentsInput.current.value = "";
     setFiles([]);
   }
 
+  const toggleDropdownFilter = () => setDisplayFilter(!displayFilter);
+  const toggleDropdownSort = () => setDisplaySort(!displaySort);
+
   const displayUpdatedTodos = (updatedTodo) => {
     setTodos(prev => prev.map(todo => todo.id == updatedTodo.id ? updatedTodo : todo));
+    setVisibleTodos(todos);
   };
 
-
+  const shortestTitle = 3;
+  const longestTitle = 40;
   return (
     <div className="dashboard-layout">
-      <Sidebar isOpen={false} onClose={() => { }} /> {/* TODO: add sidebar hide/show functionality */}
+      <Sidebar DisplayFilter={false} onClose={() => { }} /> {/* TODO: add sidebar hide/show functionality */}
       <main className="dashboard-main">
         <Header title="Tasks" subtitle="Manage and organize your tasks" onToggleSidebar={() => { }} />
 
@@ -87,25 +179,62 @@ const Task = () => {
               <div className="card shadow-sm task-form-section"> {/* add new task */}
                 <div className="card-body">
                   <h2 className="card-title mb-4">Add New Task</h2>
-                  <form id="todoForm" onSubmit={addTodo} >
+                  <form id="todoForm" onSubmit={handleSubmit(addTodo)}>
                     <div className="mb-3"> {/* title */}
                       <label htmlFor="todoTitle" className="form-label">Title</label>
-                      <input type="text" name="todoTitle" className="form-control" id="todoTitle" required />
+                      <input
+                        {...register("todoTitle", {
+                          required: "A title is required",
+                          minLength: {
+                            value: shortestTitle,
+                            message: `Title must be longer than ${shortestTitle} characters`
+                          },
+                          maxLength: {
+                            value: longestTitle,
+                            message: `Title can't be longer than ${longestTitle} characters`
+                          }
+                        })}
+                        type="text"
+                        name="todoTitle"
+                        className="form-control"
+                        id="todoTitle"
+                      />
+                      {errors.todoTitle && <small className="text-danger position-absolute">{errors.todoTitle.message}</small>}
                     </div>
 
                     <div className="mb-3"> {/* desc */}
                       <label htmlFor="todoDescription" className="form-label">Description</label>
-                      <textarea className="form-control" name="todoDescription" id="todoDescription" rows="3"></textarea>
+                      <textarea
+                        {...register("todoDescription")}
+                        className="form-control"
+                        name="todoDescription"
+                        id="todoDescription"
+                        rows="3"
+                      ></textarea>
                     </div>
 
                     <div className="row"> {/* due date & assign person */}
                       <div className="col-md-6 mb-3">
                         <label htmlFor="todoDueDate" className="form-label">Due Date</label>
-                        <input type="datetime-local" name="todoDueDate" className="form-control" id="todoDueDate" />
+                        <input
+                          {...register("todoDueDate", {
+                            required: "A due date is required"
+                          })}
+                          type="datetime-local"
+                          name="todoDueDate"
+                          className="form-control"
+                          id="todoDueDate"
+                        />
+                        {errors.todoDueDate && <small className="text-danger position-absolute">{errors.todoDueDate.message}</small>}
                       </div>
-                      <div className="col-md-6 mb-3">
+                      <div className="col-md-6 mb-3"> {/* TODO: Set their actual id and name, if possible? */}
                         <label htmlFor="todoPerson" className="form-label">Assign to Person</label>
-                        <select className="form-select" name="todoPerson" id="todoPerson">
+                        <select
+                          {...register("todoPerson")}
+                          className="form-select"
+                          name="todoPerson"
+                          id="todoPerson"
+                        >
                           <option value="">-- Select Person (Optional) --</option>
                           <option value="1">Mehrdad Javan</option>
                           <option value="2">Simon Elbrink</option>
@@ -116,7 +245,16 @@ const Task = () => {
                     <div className="mb-3">  {/* attachments */}
                       <label className="form-label">Attachments</label>
                       <div className="input-group mb-3">
-                        <input type="file" ref={attachmentsInput} name="todoAttatchments" className="form-control" id="todoAttachments" onChange={(event) => attatchmentUpdate(event)} multiple />
+                        <input
+                          {...register("todoAttatchments")}
+                          type="file"
+                          ref={attachmentsInput}
+                          name="todoAttatchments"
+                          className="form-control"
+                          id="todoAttachments"
+                          onChange={(event) => attatchmentUpdate(event)}
+                          multiple
+                        />
                         <button className="btn btn-outline-secondary" type="button" onClick={() => attatchmentDelete()} > <i className="bi bi-x-lg"></i> </button>
                       </div>
                       <div className="file-list" id="attachmentPreview">
@@ -126,30 +264,66 @@ const Task = () => {
                       </div>
                     </div>
 
-                    <div className="d-grid gap-2 d-md-flex justify-content-md-end">  {/* submit */}
-                      <button type="submit" className="btn btn-primary">
-                        <i className="bi bi-plus-lg me-2"></i> Add Task
+                    <div className="d-grid gap-2 d-md-flex justify-content-md-end align-items-md-center">  {/* submit */}
+                      {errors.root && <small className="text-danger">{errors.root.message}</small>}
+                      <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? "" : <i className="bi bi-plus-lg me-2"></i>}
+                        {isSubmitting ? "Saving todo" : "Add Task"}
                       </button>
                     </div>
                   </form>
                 </div>
               </div>
 
-              <div className="card shadow-sm tasks-list mt-4">
+              <div className="card shadow-sm tasks-list mt-4 mb-5">
                 <div className="card-header bg-white d-flex justify-content-between align-items-center"> {/* tasks header */}
                   <h5 className="card-title mb-0">Tasks</h5>
-                  <div className="btn-group">
-                    <button className="btn btn-outline-secondary btn-sm" title="Filter">
-                      <i className="bi bi-funnel"></i>
-                    </button>
-                    <button className="btn btn-outline-secondary btn-sm" title="Sort">
-                      <i className="bi bi-sort-down"></i>
-                    </button>
+
+                  <div className="btn-group" role="group" aria-label="Button group with nested dropdown">
+
+                    <div className="btn-group dropdown" role="group" ref={dropdownFilterRef}>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm dropdown-toggle"
+                        onClick={toggleDropdownFilter}
+                        aria-haspopup="true"
+                        aria-expanded={displayFilter}
+                        title="Filter"
+                      >
+                        <i className="bi bi-funnel"></i>
+                      </button>
+                      <div className={`dropdown-menu ${displayFilter ? 'show' : ''} mt-4`} aria-labelledby="dropdownMenuButton">
+                        <li className="dropdown-item" onClick={() => filterTodos("all")}>All</li>
+                        <li className="dropdown-item" onClick={() => filterTodos("overdue")}>Overdue</li>
+                        <li className="dropdown-item" onClick={() => filterTodos("pending")}>Pending</li>
+                      </div>
+                    </div>
+
+                    <div className="btn-group dropdown" role="group" ref={dropdownSortRef}>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm dropdown-toggle"
+                        onClick={toggleDropdownSort}
+                        aria-haspopup="true"
+                        aria-expanded={displaySort}
+                        title="Sort"
+                      >
+                        <i className="bi bi-sort-down"></i>
+                      </button>
+                      <div className={`dropdown-menu ${displaySort ? 'show' : ''} mt-4`} aria-labelledby="dropdownMenuButton">
+                        <li className="dropdown-item" onClick={() => sortTodos("byCreatedAcending")}>↑ Created</li>
+                        <li className="dropdown-item" onClick={() => sortTodos("byCreatedDecending")}>↓ Created</li>
+                        <li className="dropdown-item" onClick={() => sortTodos("byDueDateAcending")}>↑ Due date</li>
+                        <li className="dropdown-item" onClick={() => sortTodos("byDueDateDecending")}>↓ Due date</li>
+                      </div>
+                    </div>
+
                   </div>
+
                 </div>
                 <div className="card-body">
                   <div className="list-group">
-                    {todos.map((todo) => (
+                    {visibleTodos.map((todo) => (
                       <TaskItem todo={todo} key={todo.id} displayUpdatedTodos={displayUpdatedTodos} updateTodos={updateTodos} />
                     ))}
                   </div>

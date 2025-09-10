@@ -21,14 +21,14 @@ const axiosInstance = axios.create({
 export const taskService = {
 
 	addTodo: async function addTodo(newTodo) {
-		console.log("→→→→", newTodo);
+		//console.log("taskService addTodo");
 		try {
 			const response = await axiosInstance.post(
 				'',
 				newTodo,
 				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
 			);
-			console.log("response", response);
+			//console.log("response", response);
 			return newTodo.data;
 
 		} catch (error) {
@@ -38,12 +38,13 @@ export const taskService = {
 	},
 
 	getTodos: async function getTodos() {
+		//console.log("taskService getTodo");
 		try {
 			const response = await axiosInstance.get(
 				'',
 				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
 			);
-			console.log(response);
+			//console.log(response);
 			return response.data;
 
 		} catch (error) {
@@ -53,13 +54,14 @@ export const taskService = {
 	},
 
 	updateTodo: async function updateTodo(todo) {
+		//console.log("taskService updateTodo");
 		try {
 			const response = await axiosInstance.put(
 				`/${todo.id}`,
 				todo,
 				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
 			);
-			console.log(response);
+			//console.log(response);
 			return response.data;
 
 		} catch (error) {
@@ -69,12 +71,13 @@ export const taskService = {
 	},
 
 	deleteTodo: async function deleteTodo(todo) {
+		//console.log("taskService deleteTodo");
 		try {
 			const response = await axiosInstance.delete(
 				`/${todo.id}`,
 				{ headers: { Authorization: `Bearer ${authService.getToken()}` } }
 			);
-			console.log(response);
+			//console.log(response);
 			return response.data;
 
 		} catch (error) {

@@ -2,20 +2,16 @@ import { authService } from '../services/authService';
 import { taskService } from '../services/taskService';
 import './Task.css';
 
-const TaskItem = ({ todo, displayUpdatedTodos, updateTodos }) => {
-
+const TaskItem = ({ todo, displayUpdatedTodos, updateTodos, editTodo }) => {
+	
 	const completeTodo = async () => {
-		const updatedTodo = { ...todo, completed: !todo.completed };
+		const updatedTodo = { ...todo, completed: !todo.completed, updatedAt: new Date(), };
 		try {
 			await taskService.updateTodo(updatedTodo);
 			displayUpdatedTodos(updatedTodo);
 		} catch (err) {
 			console.error('Failed to update todo on server', err);
 		}
-	}
-
-	const editTodo = (e) => {
-		console.log("Edit, START!", e);
 	}
 
 	const deleteTodo = async (e) => {
@@ -60,7 +56,7 @@ const TaskItem = ({ todo, displayUpdatedTodos, updateTodos }) => {
 						<i className="bi bi-check-lg"></i>
 					</button>
 
-					<button className="btn btn-outline-primary btn-sm" title="Edit" onClick={(e) => editTodo(e)} >
+					<button className="btn btn-outline-primary btn-sm" title="Edit" onClick={() => editTodo(todo)} >
 						<i className="bi bi-pencil"></i>
 					</button>
 
